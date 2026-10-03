@@ -14,6 +14,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         setupMenuBarItem()
         setupIsland()
+        if !UserDefaults.standard.bool(forKey: "hasOpenedConversationInbox") {
+            DispatchQueue.main.async { [weak self] in self?.openInbox() }
+        }
     }
 
     // MARK: - Menu bar
@@ -47,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var inboxWindow: NSWindow?
 
     @objc private func openInbox() {
+        UserDefaults.standard.set(true, forKey: "hasOpenedConversationInbox")
         if AppState.shared.mode == .expanded { islandController?.collapse() }
         if let window = inboxWindow {
             window.makeKeyAndOrderFront(nil)
