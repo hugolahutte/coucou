@@ -14,7 +14,9 @@ in the original chat; Coucou does not send them automatically.
 
 **Current integration status:** ChatGPT Mac uses explicit import of a copied
 response. Claude Cobra has an experimental macOS Accessibility reader for selected
-conversations in the foreground. It has parser fixture tests based on the visible
+conversations in the foreground. It also displays the running, waiting and unread
+activities visible in Claude’s sidebar in the notch while tracking is enabled.
+It has parser fixture tests based on the visible
 Claude Code interface; live capture requires launching this build and granting
 Accessibility permission. Verify the first capture before relying on it.
 The optional `browser-extension/` can import the latest recognized Claude or

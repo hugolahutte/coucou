@@ -17,7 +17,54 @@ struct ClaudeDesktopReply: Equatable, Sendable {
     var isComplete: Bool
 }
 
+enum ClaudeDesktopActivityState: String, Sendable { case working, waiting, unread }
+
+struct ClaudeDesktopActivity: Equatable, Sendable {
+    var title: String
+    var state: ClaudeDesktopActivityState
+    var label: String {
+        switch state {
+        case .working: "En cours"
+        case .waiting: "Ta réponse est attendue dans Claude"
+        case .unread: "Réponse non lue dans Claude"
+        }
+    }
+}
+
 enum ClaudeDesktopParser {
+    static func accessibleLabel(description: String?, title: String?, value: String? = nil) -> String {
+        [description, title, value].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? ""
+    }
+
+    static func activities(_ root: ClaudeAXNode) -> [ClaudeDesktopActivity]? {
+        var sidebar: ClaudeAXNode?
+        func find(_ node: ClaudeAXNode) {
+            if ["Barre latérale", "Sidebar"].contains(node.label) { sidebar = node; return }
+            for child in node.children { find(child) }
+        }
+        find(root)
+        guard let sidebar else { return nil }
+        let prefixes: [(String, ClaudeDesktopActivityState)] = [
+            ("En cours ", .working), ("Running ", .working), ("In progress ", .working),
+            ("En attente de saisie ", .waiting), ("Needs input ", .waiting),
+            ("Réponse non lue ", .unread), ("Unread response ", .unread)
+        ]
+        var found: [ClaudeDesktopActivity] = []
+        func visit(_ node: ClaudeAXNode) {
+            if node.role == "AXButton", let prefix = prefixes.first(where: { node.label.hasPrefix($0.0) }) {
+                let title = String(node.label.dropFirst(prefix.0.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !title.isEmpty && title.count <= 300 {
+                    let item = ClaudeDesktopActivity(title: title, state: prefix.1)
+                    if !found.contains(where: { $0.title == title }) { found.append(item) }
+                }
+                return
+            }
+            for child in node.children { visit(child) }
+        }
+        visit(sidebar)
+        return found
+    }
+
     static func conversationURL(_ raw: String) -> URL? {
         guard let url = URL(string: raw), url.scheme == "https", url.host == "claude.ai",
               url.user == nil, url.password == nil, url.port == nil || url.port == 443,

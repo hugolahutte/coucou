@@ -198,8 +198,19 @@ private struct ClaudeDesktopConnectionView: View {
                 }
             }
             Text(monitor.status).font(.callout).foregroundStyle(.secondary)
-            Text("La conversation doit rester affichée au premier plan dans Claude. Les autres chats et les réponses anciennes ne sont pas récupérés en arrière-plan. La reconnaissance reste expérimentale ; vérifie la première capture.")
+            Text("Les tâches présentes dans la barre latérale de Claude apparaissent dans l’encoche. Pour les réponses, laisse la conversation choisie au premier plan. L’historique complet et les chats cachés ne sont pas importés ; vérifie la première capture.")
                 .font(.caption).foregroundStyle(.secondary)
+            if !monitor.activities.isEmpty {
+                Text("Claude · \(monitor.activities.count) activité(s)").font(.headline)
+                ForEach(monitor.activities, id: \.title) { item in
+                    Text("\(item.title) — \(item.label)").font(.caption)
+                }
+            }
+            if !monitor.diagnostic.isEmpty {
+                DisclosureGroup("Détails du diagnostic") {
+                    Text(monitor.diagnostic).font(.caption).textSelection(.enabled)
+                }
+            }
             if !monitor.followed.isEmpty {
                 Text("Conversations suivies : \(monitor.followed.count)").font(.headline)
                 ScrollView {

@@ -10,6 +10,9 @@ final class ClaudeDesktopMonitor: ObservableObject {
     @Published private(set) var status = "Suivi Claude Mac désactivé."
     @Published private(set) var candidate: ClaudeDesktopReply?
     @Published private(set) var reading = false
+    @Published private(set) var activities: [ClaudeDesktopActivity] = []
+    @Published private(set) var diagnostic = ""
+    private var activityUpdatedAt = Date.distantPast
     @Published private(set) var followed: [String]
     private var timer: Timer?
     private var stability = ClaudeCaptureStability()
@@ -32,6 +35,7 @@ final class ClaudeDesktopMonitor: ObservableObject {
 
     func setEnabled(_ value: Bool) {
         enabled = value; revision += 1; stability.reset(); candidate = nil
+        if !value { updateActivities([]) }
         defaults.set(value, forKey: "claudeDesktopCaptureEnabled")
         status = value ? "Ouvre une conversation dans Claude, puis choisis « Repérer la conversation »." : "Suivi Claude Mac désactivé."
     }
@@ -80,10 +84,11 @@ final class ClaudeDesktopMonitor: ObservableObject {
 
     private func poll() async {
         guard enabled, !reading else { return }
-        guard NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundle else { stability.reset(); return }
+        if Date().timeIntervalSince(activityUpdatedAt) > 30 { updateActivities([]) }
+        let wasForeground = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundle
         let token = revision
         let result = await snapshot()
-        guard token == revision, enabled,
+        guard token == revision, enabled, wasForeground,
               NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundle else { stability.reset(); return }
         guard let result, followed.contains(result.url.absoluteString) else {
             stability.reset()
@@ -97,12 +102,40 @@ final class ClaudeDesktopMonitor: ObservableObject {
         // Content hash persists across restarts and changing pagination. Repeated identical replies coalesce.
         let digest = SHA256.hash(data: Data(ready.text.utf8)).map { String(format: "%02x", $0) }.joined()
         let store = ConversationInboxStore.shared
+        var inserted = false
         let saved = store.change { inbox in
             let id = try inbox.conversation(space: .claudeCobra, title: ready.title,
                                             externalID: ready.url.path, url: ready.url)
-            try inbox.receive(conversationID: id, messageID: "claude-mac:\(digest)", text: ready.text)
+            inserted = try inbox.receive(conversationID: id, messageID: "claude-mac:\(digest)", text: ready.text)
         }
+        if saved && inserted { NotificationCenter.default.post(name: .hookReveal, object: nil) }
         status = saved ? "Réponse enregistrée dans Claude · Cobra." : "Sauvegarde impossible : \(store.errorMessage ?? "réessaie")"
+    }
+
+    private func updateActivities(_ items: [ClaudeDesktopActivity]) {
+        activityUpdatedAt = Date()
+        activities = items
+        let state = AppState.shared
+        let prefix = "claude-mac-activity:"
+        let ids = items.map { item in
+            prefix + SHA256.hash(data: Data(item.title.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
+        let obsolete = state.tasks.filter { $0.id.hasPrefix(prefix) && !ids.contains($0.id) }.map(\.id)
+        for id in obsolete { state.removeTask(id: id) }
+        var added = false
+        for (item, id) in zip(items, ids) {
+            let botState: BotState = item.state == .working ? .working : item.state == .unread ? .finished : .idle
+            let task = AgentTask(id: id, name: "Claude · \(item.title)", color: "#E07950",
+                                 state: botState, steps: [item.label], source: .agent,
+                                 pillBadge: item.state == .unread ? .finished : nil)
+            if let index = state.tasks.firstIndex(where: { $0.id == id }) {
+                if state.tasks[index] != task { state.tasks[index] = task }
+            } else { state.addTask(task); added = true }
+        }
+        if added {
+            if let id = ids.first, state.focusTask?.state == .idle { state.setFocus(id) }
+            NotificationCenter.default.post(name: .hookReveal, object: nil)
+        }
     }
 
     private func snapshot() async -> ClaudeDesktopReply? {
@@ -114,9 +147,16 @@ final class ClaudeDesktopMonitor: ObservableObject {
         reading = true
         defer { reading = false }
         let pid = app.processIdentifier
-        let tree = await Task.detached(priority: .utility) { ClaudeDesktopAXReader.read(pid: pid) }.value
-        guard enabled else { return nil }
-        guard let tree, let reply = ClaudeDesktopParser.parse(tree) else {
+        let token = revision
+        let result = await Task.detached(priority: .utility) { ClaudeDesktopAXReader.read(pid: pid) }.value
+        guard enabled, token == revision else { return nil }
+        diagnostic = result.diagnostic
+        guard let tree = result.tree else {
+            status = "Lecture de Claude interrompue. Réessaie une fois sa fenêtre affichée."
+            return nil
+        }
+        if let activity = ClaudeDesktopParser.activities(tree) { updateActivities(activity) }
+        guard let reply = ClaudeDesktopParser.parse(tree) else {
             status = "Conversation non reconnue. Ouvre un chat contenant une réponse Claude et réessaie."
             return nil
         }
@@ -124,47 +164,76 @@ final class ClaudeDesktopMonitor: ObservableObject {
     }
 }
 
+private struct ClaudeDesktopAXRead: Sendable {
+    var tree: ClaudeAXNode?
+    var diagnostic: String
+}
+
 /// No clicks, keystrokes, clipboard, credential files, screenshots or network requests.
 private enum ClaudeDesktopAXReader {
-    static func read(pid: pid_t) -> ClaudeAXNode? {
+    static func read(pid: pid_t) -> ClaudeDesktopAXRead {
         #if APPSTORE
-        return nil
+        return ClaudeDesktopAXRead(diagnostic: "App Store build: reader unavailable")
         #else
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.3)
-        guard let window = attribute(app, kAXFocusedWindowAttribute) else { return nil }
-        guard CFGetTypeID(window) == AXUIElementGetTypeID() else { return nil }
+        var window = attribute(app, kAXFocusedWindowAttribute) ?? attribute(app, kAXMainWindowAttribute)
+        if window == nil, let windows = attribute(app, kAXWindowsAttribute) as? [AXUIElement], windows.count == 1 { window = windows[0] }
+        guard let window, CFGetTypeID(window) == AXUIElementGetTypeID() else {
+            return ClaudeDesktopAXRead(diagnostic: "No accessible focused/main window")
+        }
         let deadline = Date().addingTimeInterval(8)
         var remaining = 8000
-        var failed = false
+        var failure: String?
+        var areas = 0, links = 0, headings = 0, texts = 0
         func walk(_ element: AXUIElement, depth: Int) -> ClaudeAXNode? {
-            guard !failed, depth < 80, remaining > 0, Date() < deadline else { failed = true; return nil }
+            guard failure == nil, depth < 80, remaining > 0, Date() < deadline else {
+                failure = "Read limit reached"; return nil
+            }
             remaining -= 1
-            guard let role = attribute(element, kAXRoleAttribute) as? String else { failed = true; return nil }
-            let label = (attribute(element, kAXDescriptionAttribute) as? String)
-                ?? (attribute(element, kAXTitleAttribute) as? String) ?? ""
-            // Read values only for static text, never editable fields/passwords.
+            guard let role = attribute(element, kAXRoleAttribute) as? String else {
+                failure = "Element role unavailable"; return nil
+            }
+            // Batch metadata/children without ever including values of editable fields.
+            let names = [kAXDescriptionAttribute, kAXTitleAttribute, kAXChildrenAttribute] as CFArray
+            var valuesRef: CFArray?
+            let batchError = AXUIElementCopyMultipleAttributeValues(element, names, [], &valuesRef)
+            guard batchError == .success, let values = valuesRef as? [Any], values.count == 3 else {
+                failure = "Element metadata unavailable"; return nil
+            }
             let value = role == "AXStaticText" ? (attribute(element, kAXValueAttribute) as? String ?? "") : ""
+            let label = ClaudeDesktopParser.accessibleLabel(description: values[0] as? String, title: values[1] as? String, value: value)
             let rawURL = role == "AXWebArea" ? attribute(element, "AXURL") : nil
             let url = (rawURL as? URL)?.absoluteString ?? rawURL as? String ?? ""
+            if role == "AXWebArea" { areas += 1; if ClaudeDesktopParser.conversationURL(url) != nil { links += 1 } }
+            if role == "AXHeading" { headings += 1 }
+            if role == "AXStaticText" { texts += 1 }
             var node = ClaudeAXNode(role: role, label: label, value: value, url: url)
-            if role == "AXTextArea" || role == "AXTextField" || role == "AXSecureTextField" { return node }
-            // Unsupported children is valid for leaves; transient AX errors invalidate the entire read.
-            var childrenRef: CFTypeRef?
-            let error = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef)
-            if error == .success, let children = childrenRef as? [AXUIElement] {
+            if ["AXTextArea", "AXTextField", "AXSecureTextField"].contains(role) { return node }
+            if let children = values[2] as? [AXUIElement] {
                 for child in children {
                     guard let item = walk(child, depth: depth + 1) else { return nil }
                     node.children.append(item)
                 }
-            } else if error != .attributeUnsupported && error != .noValue && error != .success { failed = true; return nil }
+            } else if CFGetTypeID(values[2] as CFTypeRef) == AXValueGetTypeID() {
+                let ax = values[2] as! AXValue
+                if AXValueGetType(ax) == .axError {
+                    var error = AXError.success
+                    AXValueGetValue(ax, .axError, &error)
+                    if error != .attributeUnsupported && error != .noValue {
+                        failure = "Children unavailable: \(error.rawValue)"; return nil
+                    }
+                }
+            }
             if node.label.isEmpty, role == "AXHeading", let first = node.children.first(where: { $0.role == "AXStaticText" }) {
                 node.label = first.value.isEmpty ? first.label : first.value
             }
             return node
         }
         let result = walk(window as! AXUIElement, depth: 0)
-        return failed ? nil : result
+        // Counts only: never include a title, URL, account identifier or reply in diagnostics.
+        let diagnostic = "\(failure ?? "Read complete"); nodes=\(8000 - remaining); areas=\(areas); conversations=\(links); headings=\(headings); texts=\(texts)"
+        return ClaudeDesktopAXRead(tree: failure == nil ? result : nil, diagnostic: diagnostic)
         #endif
     }
 

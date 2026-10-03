@@ -4,6 +4,21 @@ import Foundation
     static func main() throws {
         func text(_ value: String) -> ClaudeAXNode { ClaudeAXNode(role: "AXStaticText", value: value) }
         func heading(_ label: String) -> ClaudeAXNode { ClaudeAXNode(role: "AXHeading", label: label, children: [text(label)]) }
+        precondition(ClaudeDesktopParser.accessibleLabel(description: "", title: "Conversation - Claude") == "Conversation - Claude")
+        precondition(ClaudeDesktopParser.accessibleLabel(description: "  ", title: nil, value: "Texte") == "Texte")
+        let sidebar = ClaudeAXNode(role: "AXGroup", label: "Barre latérale", children: [
+            ClaudeAXNode(role: "AXButton", label: "En cours Première tâche"),
+            ClaudeAXNode(role: "AXButton", label: "En cours Première tâche"),
+            ClaudeAXNode(role: "AXButton", label: "En attente de saisie Deuxième tâche"),
+            ClaudeAXNode(role: "AXButton", label: "Réponse non lue Troisième tâche"),
+            ClaudeAXNode(role: "AXButton", label: "Inactif Ancienne tâche")])
+        let activityRoot = ClaudeAXNode(role: "AXWindow", children: [sidebar,
+            ClaudeAXNode(role: "AXButton", label: "En cours Texte hors de la barre latérale")])
+        let activities = ClaudeDesktopParser.activities(activityRoot)!
+        precondition(activities.map(\.state) == [.working, .waiting, .unread])
+        precondition(activities.count == 3)
+        precondition(ClaudeDesktopParser.activities(ClaudeAXNode(role: "AXWindow")) == nil)
+        precondition(ClaudeDesktopParser.activities(ClaudeAXNode(role: "AXGroup", label: "Sidebar")) == [])
         let actions = ClaudeAXNode(role: "AXToolbar", label: "Actions du message", children: [ClaudeAXNode(role: "AXButton", label: "Copier")])
         let answer = ClaudeAXNode(role: "AXGroup", label: "Message 21", children: [heading("Claude a répondu : Début"), text("Début")])
         let transcript = ClaudeAXNode(role: "AXGroup", label: "Messages de la conversation", children: [

@@ -28,7 +28,7 @@ from pathlib import Path
 info = plistlib.loads(Path('NotchBuddy/Resources/Info.plist').read_bytes())
 info.update(CFBundleExecutable='Coucou', CFBundleDevelopmentRegion='fr', CFBundleName='Coucou Preview',
             CFBundleDisplayName='Coucou Preview', CFBundleIconFile='AppIcon', LSMinimumSystemVersion='15.0',
-            CFBundleShortVersionString='0.2.0', CFBundleVersion='1')
+            CFBundleShortVersionString='0.2.1', CFBundleVersion='2')
 Path(sys.argv[1]).write_bytes(plistlib.dumps(info))
 PY
 codesign --force --sign - --options runtime --entitlements NotchBuddy/Resources/Coucou.entitlements "$PREVIEW_APP"
