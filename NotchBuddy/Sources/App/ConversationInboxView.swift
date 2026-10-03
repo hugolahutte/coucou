@@ -8,6 +8,7 @@ struct ConversationInboxView: View {
     @State private var filter: InboxStatus = .pending
     @State private var draft = ""
     @State private var importing = false
+    @State private var connectingClaude = false
     @State private var copiedDraft: UUID?
 
     private var conversations: [TrackedConversation] { store.inbox.conversations }
@@ -37,7 +38,8 @@ struct ConversationInboxView: View {
                 }
                 Button("Toutes les conversations") { selectedConversation = nil }
                 Button("Ajouter une réponse…", systemImage: "plus") { importing = true }
-                Text("ChatGPT et Cobra sur Mac : importe une réponse copiée. HL dans Chrome : le connecteur peut suivre les conversations choisies.")
+                Button("Connecter Claude Mac…", systemImage: "link") { connectingClaude = true }
+                Text("Claude Mac : suivi des conversations choisies. ChatGPT Mac : import d’une réponse copiée. HL : connecteur Chrome.")
                     .font(.caption).foregroundStyle(.secondary)
             }.padding().frame(minWidth: 230, idealWidth: 260, maxWidth: 320)
 
@@ -105,6 +107,7 @@ struct ConversationInboxView: View {
         }
         .frame(minWidth: 760, minHeight: 540)
         .sheet(isPresented: $importing) { ImportConversationReplyView(store: store, selectedConversation: $selectedConversation) }
+        .sheet(isPresented: $connectingClaude) { ClaudeDesktopConnectionView() }
         .onChange(of: selectedConversation) { _, _ in draft = ""; copiedDraft = nil }
     }
 
@@ -118,6 +121,8 @@ struct ConversationInboxView: View {
         if let url = chat.url, chat.space.accepts(url: url) {
             if chat.space == .claudeHL, let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") {
                 NSWorkspace.shared.open([url], withApplicationAt: chrome, configuration: NSWorkspace.OpenConfiguration())
+            } else if chat.space == .claudeCobra, let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") {
+                NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
             } else { NSWorkspace.shared.open(url) }
         } else {
             let bundles = chat.space == .chatgptMac ? ["com.openai.chat", "com.openai.codex"] : ["com.anthropic.claudefordesktop"]
@@ -164,5 +169,52 @@ private struct ImportConversationReplyView: View {
             }
         }.padding(24).frame(width: 560)
             .onChange(of: space) { _, _ in existingID = nil }
+    }
+}
+
+
+private struct ClaudeDesktopConnectionView: View {
+    @ObservedObject private var monitor = ClaudeDesktopMonitor.shared
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Connecter Claude · Cobra").font(.title2.bold())
+            Text("Coucou lit les réponses visibles de Claude Mac avec l’autorisation Accessibilité. Vérifie que Claude utilise ton compte Cobra. Les données restent dans la liste sur ce Mac.")
+            Toggle("Activer le suivi Claude Mac", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0) }))
+            if monitor.enabled {
+                Button("Autoriser dans les réglages macOS…") { monitor.requestPermission() }
+                Text("1. Ouvre la conversation dans Claude. 2. Reviens ici et repère-la. 3. Active son suivi puis retourne dans Claude.").font(.callout)
+                Button("Repérer la conversation ouverte dans Claude") { Task { await monitor.discover() } }
+                    .disabled(monitor.reading)
+                if let chat = monitor.candidate {
+                    Text(chat.title).font(.headline)
+                    Text(chat.url.path).font(.caption).foregroundStyle(.secondary)
+                    if monitor.followed.contains(chat.url.absoluteString) {
+                        Button("Arrêter le suivi de cette conversation") { monitor.unfollow(chat.url.absoluteString) }
+                    } else {
+                        Button("Suivre cette conversation dans Claude · Cobra") { monitor.followCandidate() }
+                    }
+                }
+            }
+            Text(monitor.status).font(.callout).foregroundStyle(.secondary)
+            Text("La conversation doit rester affichée au premier plan dans Claude. Les autres chats et les réponses anciennes ne sont pas récupérés en arrière-plan. La reconnaissance reste expérimentale ; vérifie la première capture.")
+                .font(.caption).foregroundStyle(.secondary)
+            if !monitor.followed.isEmpty {
+                Text("Conversations suivies : \(monitor.followed.count)").font(.headline)
+                ScrollView {
+                    VStack(alignment: .leading) {
+                        ForEach(monitor.followed, id: \.self) { url in
+                            HStack {
+                                Text(ConversationInboxStore.shared.inbox.conversations.first { $0.space == .claudeCobra && $0.url?.absoluteString == url }?.title ?? URL(string: url)?.path ?? url).lineLimit(2)
+                                Spacer()
+                                Button("Arrêter") { monitor.unfollow(url) }
+                            }.padding(.vertical, 4)
+                        }
+                    }
+                }.frame(maxHeight: 100)
+            }
+            HStack { Spacer(); Button("Fermer") { dismiss() } }
+        }.padding(24).frame(width: 560)
     }
 }

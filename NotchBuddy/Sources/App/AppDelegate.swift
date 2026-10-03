@@ -138,6 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(openInboxFromNotification(_:)),
                                                name: .openConversationInbox, object: nil)
         _ = ConversationInboxStore.shared
+        ClaudeDesktopMonitor.shared.start()
         NotificationCenter.default.addObserver(self, selector: #selector(updateInboxBadge(_:)),
                                                name: .conversationInboxChanged, object: nil)
         updateInboxBadge(Notification(name: .conversationInboxChanged))

@@ -15,7 +15,8 @@ enum ConversationSpace: String, Codable, CaseIterable, Identifiable, Sendable {
               url.port == nil || url.port == 443 else { return false }
         switch self {
         case .chatgptMac: return url.host == "chatgpt.com" && url.path.hasPrefix("/c/") && url.path.count > 3 && url.query == nil && url.fragment == nil
-        case .claudeCobra, .claudeHL: return url.host == "claude.ai" && url.path.hasPrefix("/chat/") && url.path.count > 6 && url.query == nil && url.fragment == nil
+        case .claudeCobra: return url.host == "claude.ai" && ["/chat/", "/epitaxy/", "/cowork/"].contains { url.path.hasPrefix($0) && url.path.count > $0.count } && url.query == nil && url.fragment == nil
+        case .claudeHL: return url.host == "claude.ai" && url.path.hasPrefix("/chat/") && url.path.count > 6 && url.query == nil && url.fragment == nil
         }
     }
 }

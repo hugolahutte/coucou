@@ -12,12 +12,36 @@ saved locally, separately for **ChatGPT Mac**, **Claude Cobra**, and **Claude HL
 You can mark replies as pending, deferred, or done. Drafts are copied for sending
 in the original chat; Coucou does not send them automatically.
 
-**Current integration status:** ChatGPT Mac and Claude Cobra use explicit import
-of a copied response. Automatic capture from these native apps is not implemented.
+**Current integration status:** ChatGPT Mac uses explicit import of a copied
+response. Claude Cobra has an experimental macOS Accessibility reader for selected
+conversations in the foreground. It has parser fixture tests based on the visible
+Claude Code interface; live capture requires launching this build and granting
+Accessibility permission. Verify the first capture before relying on it.
 The optional `browser-extension/` can import the latest recognized Claude or
 ChatGPT web response and experimentally follow selected conversations. Its DOM
 selectors have automated fixture tests but have not been validated against a live
 signed-in conversation. Verify the first imported response before relying on it.
+
+### Connect Claude Mac (Cobra)
+
+Open **Mes réponses à traiter → Connecter Claude Mac…**, enable the reader, and
+use **Autoriser dans les réglages macOS…** to grant Coucou Accessibility access.
+The OS permission permits broad accessibility access; this reader only reads
+Claude's focused window, never sends input or reads editable/password values.
+Open the desired conversation in Claude, return to Coucou, select **Repérer la
+conversation**, verify the title and that your Claude account is Cobra, then
+select **Suivre cette conversation**. Return to Claude and keep that conversation
+in the foreground to capture its latest finished response.
+
+The reader requires an explicit assistant heading and completed message actions,
+three identical reads across at least six seconds, and no recognized generation
+indicator. An unrecognized interface or incomplete/bounded AX read saves nothing.
+It supports recognized `/chat/`, `/epitaxy/` and `/cowork/` conversation identities;
+artifact query parameters are removed. It does not fetch hidden or background
+chats, historical messages, or send drafts. Content hashes suppress reimports
+across restarts and pagination; identical repeated replies coalesce. Disable the
+reader globally or stop individual conversations from the same connection panel.
+No screenshots, credentials, browser storage or provider API calls are used.
 
 ### Try the browser connector
 
@@ -53,6 +77,7 @@ Additional checks:
 
 ```sh
 bash scripts/test-conversation-inbox.sh
+bash scripts/test-claude-desktop.sh
 node --test tests/browser-*.test.mjs
 python3 tests/test_native_bridge.py
 ```

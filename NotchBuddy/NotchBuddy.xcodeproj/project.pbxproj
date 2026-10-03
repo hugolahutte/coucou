@@ -87,6 +87,20 @@
 		FAD78D74C6906D4EC8AA4101 /* UploadSequenceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD65943C32E150F1CD65C31 /* UploadSequenceEngine.swift */; };
 		FBBC4CDE82B5886A83A27D7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 506824380E9C80B9BC6DCE72 /* Assets.xcassets */; };
 		FEFEF1EBAB0E6CA74A33C10B /* SafeWebURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FDED98F7F6C755A72C97A3 /* SafeWebURL.swift */; };
+		4511DEC406CF206ED4F62075 /* ChatSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27822A064560FFF61D00C1D4 /* ChatSafety.swift */; };
+		3C62423A7BD04ABD6343F49E /* ChatSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27822A064560FFF61D00C1D4 /* ChatSafety.swift */; };
+		0EDF19698E415D9E8FBBDD8C /* ClaudeDesktopCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EDD59E8039B288424D15C67 /* ClaudeDesktopCapture.swift */; };
+		9F42091536FEB4D7880C7950 /* ClaudeDesktopCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EDD59E8039B288424D15C67 /* ClaudeDesktopCapture.swift */; };
+		67498DBF417E0298842FED88 /* ClaudeDesktopMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9B1F3A6DB527849ACB4616 /* ClaudeDesktopMonitor.swift */; };
+		097F41B436CC632D49200BC9 /* ClaudeDesktopMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9B1F3A6DB527849ACB4616 /* ClaudeDesktopMonitor.swift */; };
+		0A4814EC5BB60A84916980A6 /* ConversationInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277631CFFA19FFB53E28A824 /* ConversationInbox.swift */; };
+		1D2F8169F0E8D4C5EBE12746 /* ConversationInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277631CFFA19FFB53E28A824 /* ConversationInbox.swift */; };
+		D349565864C8E6FBC3D2E061 /* ConversationInboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6CDEC3BA1AEE6ECE4F43D3 /* ConversationInboxStore.swift */; };
+		172F562141F4A450FE8CD103 /* ConversationInboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6CDEC3BA1AEE6ECE4F43D3 /* ConversationInboxStore.swift */; };
+		FF0A269C382D1C36F3056853 /* ConversationInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23AC7ABFCE461A21B2068B45 /* ConversationInboxView.swift */; };
+		C6FB96EA1EF727581D30C2FE /* ConversationInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23AC7ABFCE461A21B2068B45 /* ConversationInboxView.swift */; };
+		E3605C8CAD0A5A719210A2E0 /* InboxNotchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FB258C014A6CB74F759F6F /* InboxNotchButton.swift */; };
+		DFF160BE3C1DDF590372271D /* InboxNotchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FB258C014A6CB74F759F6F /* InboxNotchButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -132,12 +146,26 @@
 		F4263B550838CC5614569D13 /* ClaudePlanCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudePlanCardView.swift; sourceTree = "<group>"; };
 		F4A13AEE6E06F46CEC9D908C /* UserIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserIdentity.swift; sourceTree = "<group>"; };
 		FA02B08886939FF6FE0475DD /* IslandViewContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandViewContent.swift; sourceTree = "<group>"; };
+		27822A064560FFF61D00C1D4 /* ChatSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSafety.swift; sourceTree = "<group>"; };
+		2EDD59E8039B288424D15C67 /* ClaudeDesktopCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeDesktopCapture.swift; sourceTree = "<group>"; };
+		0C9B1F3A6DB527849ACB4616 /* ClaudeDesktopMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeDesktopMonitor.swift; sourceTree = "<group>"; };
+		277631CFFA19FFB53E28A824 /* ConversationInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationInbox.swift; sourceTree = "<group>"; };
+		1F6CDEC3BA1AEE6ECE4F43D3 /* ConversationInboxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationInboxStore.swift; sourceTree = "<group>"; };
+		23AC7ABFCE461A21B2068B45 /* ConversationInboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationInboxView.swift; sourceTree = "<group>"; };
+		B1FB258C014A6CB74F759F6F /* InboxNotchButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxNotchButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		2D4550630644796DA0649B81 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B1FB258C014A6CB74F759F6F /* InboxNotchButton.swift */,
+				23AC7ABFCE461A21B2068B45 /* ConversationInboxView.swift */,
+				1F6CDEC3BA1AEE6ECE4F43D3 /* ConversationInboxStore.swift */,
+				277631CFFA19FFB53E28A824 /* ConversationInbox.swift */,
+				0C9B1F3A6DB527849ACB4616 /* ClaudeDesktopMonitor.swift */,
+				2EDD59E8039B288424D15C67 /* ClaudeDesktopCapture.swift */,
+				27822A064560FFF61D00C1D4 /* ChatSafety.swift */,
 				192844E7299DEED5C2372067 /* AppDelegate.swift */,
 				9F6D7015D6A77AA59323C0E7 /* AppLog.swift */,
 				C2E4F18AA940EFF7E047B9F7 /* AppState.swift */,
@@ -318,6 +346,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E3605C8CAD0A5A719210A2E0 /* InboxNotchButton.swift in Sources */,
+				FF0A269C382D1C36F3056853 /* ConversationInboxView.swift in Sources */,
+				D349565864C8E6FBC3D2E061 /* ConversationInboxStore.swift in Sources */,
+				0A4814EC5BB60A84916980A6 /* ConversationInbox.swift in Sources */,
+				67498DBF417E0298842FED88 /* ClaudeDesktopMonitor.swift in Sources */,
+				0EDF19698E415D9E8FBBDD8C /* ClaudeDesktopCapture.swift in Sources */,
+				4511DEC406CF206ED4F62075 /* ChatSafety.swift in Sources */,
 				C940B651C6CA952D99388E04 /* AppDelegate.swift in Sources */,
 				4B6AC00F22EC75E90E0157D5 /* AppLog.swift in Sources */,
 				1F11EC4E6F604C612A1ADAD1 /* AppState.swift in Sources */,
@@ -363,6 +398,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DFF160BE3C1DDF590372271D /* InboxNotchButton.swift in Sources */,
+				C6FB96EA1EF727581D30C2FE /* ConversationInboxView.swift in Sources */,
+				172F562141F4A450FE8CD103 /* ConversationInboxStore.swift in Sources */,
+				1D2F8169F0E8D4C5EBE12746 /* ConversationInbox.swift in Sources */,
+				097F41B436CC632D49200BC9 /* ClaudeDesktopMonitor.swift in Sources */,
+				9F42091536FEB4D7880C7950 /* ClaudeDesktopCapture.swift in Sources */,
+				3C62423A7BD04ABD6343F49E /* ChatSafety.swift in Sources */,
 				878924960FC0F2B3524D48AC /* AppDelegate.swift in Sources */,
 				61CB7049490F61CFA1B36B64 /* AppLog.swift in Sources */,
 				61F73B27A7E3AFF584B2CC22 /* AppState.swift in Sources */,

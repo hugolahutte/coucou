@@ -36,6 +36,9 @@ jobs:
       - name: Test conversation inbox and chat safety
         run: bash scripts/test-conversation-inbox.sh
 
+      - name: Test Claude desktop capture
+        run: bash scripts/test-claude-desktop.sh
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
