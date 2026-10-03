@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Coucou — Mes réponses",
+  "version": "0.1.0",
+  "description": "Conserve les réponses des conversations choisies dans Coucou, sur ce Mac.",
+  "permissions": ["storage", "nativeMessaging", "activeTab"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Suivre cette conversation dans Coucou" },
+  "content_scripts": [{
+    "matches": ["https://claude.ai/*", "https://chatgpt.com/*"],
+    "js": ["reader.js", "content.js"],
+    "run_at": "document_idle"
+  }]
+}

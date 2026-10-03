@@ -478,6 +478,7 @@ struct IslandHeader: View {
                     #endif
                 })
                 TabButton(icon: "plus", view: .upload, state: state)
+                InboxNotchButton()
             }
             .padding(.leading, 14)
 

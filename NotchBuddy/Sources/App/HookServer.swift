@@ -39,8 +39,10 @@ final class HookServer: @unchecked Sendable {
     private let connectionLock = NSLock()
     private var connectionCount = 0
     private var pendingApprovalFD: Int32 = -1         // held open while user decides
+    private var approvalRequestID: UUID?
     private var approvalFDSource: (any DispatchSourceRead)? = nil  // monitors pendingApprovalFD
     private var pendingQuestionFD: Int32 = -1         // held open while user answers AskUserQuestion
+    private var questionRequestID: UUID?
     private var questionFDSource: (any DispatchSourceRead)? = nil  // monitors pendingQuestionFD
     private var questionPillId: String = ""           // pill that owns the pending question
     private var focusBeforeQuestion: String? = nil    // saved focus to restore after question
@@ -272,7 +274,7 @@ final class HookServer: @unchecked Sendable {
             if raw.count > Self.maxPayload { break }
         }
 
-        guard !raw.isEmpty,
+        guard !raw.isEmpty, raw.count <= Self.maxPayload,
               let payload = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] else {
             sendLine(fd: fd, text: #"{"ok":true}"#)
             close(fd)
@@ -280,6 +282,24 @@ final class HookServer: @unchecked Sendable {
         }
 
         let coucouKind = payload["coucou_kind"] as? String ?? ""
+
+        if coucouKind == "conversation_response" {
+            Task { @MainActor in
+                let before = ConversationInboxStore.shared.inbox.replies.count
+                let saved = ConversationInboxStore.shared.receive(payload)
+                if saved, ConversationInboxStore.shared.inbox.replies.count > before {
+                    SoundEngine.shared.play("finish")
+                    NotificationCenter.default.post(name: .triggerEmote, object: BotEmote.happy)
+                    NotificationCenter.default.post(name: .hookReveal, object: nil)
+                }
+                // Acknowledge only after the response is durably saved.
+                Task.detached { [weak self] in
+                    self?.sendLine(fd: fd, text: saved ? #"{"ok":true}"# : #"{"ok":false}"#)
+                    close(fd)
+                }
+            }
+            return
+        }
 
         // statusline payloads are handled separately — no session, no reveal, no sound
         if coucouKind == "statusline" {
@@ -648,7 +668,7 @@ final class HookServer: @unchecked Sendable {
             return
         }
 
-        let command = toolInput["command"] as? String ?? tool
+        let command = ChatSafety.approvalTarget(tool: tool, input: toolInput)
 
         if pendingApprovalFD >= 0 {
             // Displace the previous request: write "ask" then cancel its source.
@@ -663,6 +683,8 @@ final class HookServer: @unchecked Sendable {
             }
         }
         pendingApprovalFD = fd
+        let requestID = UUID()
+        approvalRequestID = requestID
         activeSessionId = sessionId
 
         upsertWorkspaceTask(id: pillId, projectName: projectName, cwd: cwd)
@@ -683,7 +705,7 @@ final class HookServer: @unchecked Sendable {
         let capturedPillId = pillId
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .main)
         source.setEventHandler { [weak self] in
-            guard let self, self.pendingApprovalFD == fd else { return }
+            guard let self, self.pendingApprovalFD == fd, self.approvalRequestID == requestID else { return }
             let note: String
             switch capturedPillId {
             case "agent_cursor": note = "Handled in Cursor."
@@ -700,7 +722,7 @@ final class HookServer: @unchecked Sendable {
         // nb-hook reads EOF from the cancel handler's close and exits; Claude Code / Codex re-asks.
         let captured = fd
         DispatchQueue.main.asyncAfter(deadline: .now() + 115) { [weak self] in
-            guard let self, self.pendingApprovalFD == captured else { return }
+            guard let self, self.pendingApprovalFD == captured, self.approvalRequestID == requestID else { return }
             let note: String
             switch capturedPillId {
             case "agent_cursor": note = "Still waiting in Cursor."
@@ -806,6 +828,8 @@ final class HookServer: @unchecked Sendable {
             }
         }
         pendingQuestionFD = fd
+        let requestID = UUID()
+        questionRequestID = requestID
         activeSessionId = sessionId
         questionPillId = pillId
 
@@ -821,7 +845,7 @@ final class HookServer: @unchecked Sendable {
 
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .main)
         source.setEventHandler { [weak self] in
-            guard let self, self.pendingQuestionFD == fd else { return }
+            guard let self, self.pendingQuestionFD == fd, self.questionRequestID == requestID else { return }
             self.dismissQuestionCard(note: "")
         }
         source.setCancelHandler { close(fd) }
@@ -830,7 +854,7 @@ final class HookServer: @unchecked Sendable {
 
         let captured = fd
         DispatchQueue.main.asyncAfter(deadline: .now() + 120) { [weak self] in
-            guard let self, self.pendingQuestionFD == captured else { return }
+            guard let self, self.pendingQuestionFD == captured, self.questionRequestID == requestID else { return }
             // Send "ask" so nb-hook exits cleanly; Claude Code re-asks in terminal.
             let askFD = self.pendingQuestionFD
             self.pendingQuestionFD = -1

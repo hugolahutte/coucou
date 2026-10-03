@@ -1037,7 +1037,7 @@ struct PromptView: View {
                             .foregroundColor(Color(hex: "#0B0C0E"))
                     }
                     .buttonStyle(SendButtonStyle())
-                    .disabled(text.isEmpty)
+                    .disabled(text.isEmpty || state.isChatSending)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Color.white.opacity(0.07))
@@ -1051,6 +1051,9 @@ struct PromptView: View {
         }
         .padding(.bottom, 10)
         .onAppear { focused = true }
+        .onChange(of: state.isChatSending) { _, sending in
+            if !sending { focused = true }
+        }
         .onChange(of: state.view) { _, view in
             if view == .prompt {
                 state.fetchModelsIfNeeded(for: state.chatProvider)
@@ -1065,15 +1068,12 @@ struct PromptView: View {
 
     private func sendMessage() {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return }
+        guard !query.isEmpty, !state.isChatSending else { return }
+        guard ClaudeService.shared.sendChat(query: query, context: state.promptContext, state: state) else { return }
         text = ""
         focused = false
         state.chatHistory.append(ChatMessage(role: .user, content: query))
         state.stateOverride = .thinking
-        Task {
-            await ClaudeService.shared.chat(query: query, context: state.promptContext, state: state)
-            await MainActor.run { focused = true }
-        }
     }
 }
 
@@ -1152,6 +1152,7 @@ struct ModelPickerView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .disabled(state.isChatSending)
 
             Divider().opacity(0.2)
 

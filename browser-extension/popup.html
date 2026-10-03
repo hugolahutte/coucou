@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Coucou</title><link rel="stylesheet" href="popup.css"></head>
+<body><h1>Mes réponses dans Coucou</h1>
+<p>Le suivi concerne uniquement cette conversation et transmet ses réponses à Coucou sur ce Mac.</p>
+<label for="space">Compte</label><select id="space"><option value="claudeHL">Claude · HL</option><option value="claudeCobra">Claude · Cobra</option><option value="chatgptMac">ChatGPT</option></select>
+<label for="title">Nom de la conversation</label><input id="title" maxlength="300">
+<button id="enable">Suivre cette conversation</button><button id="capture">Ajouter la dernière réponse</button><button id="disable">Arrêter le suivi</button>
+<p id="status" role="status"></p><small>Le suivi automatique est expérimental : vérifie la première réponse importée. Les applications Mac utilisent l’import d’une réponse copiée.</small>
+<script src="reader.js"></script><script src="popup.js"></script></body></html>

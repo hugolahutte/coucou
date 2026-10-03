@@ -46,6 +46,13 @@ enum FileDropHandler {
     @MainActor
     static func handle(urls: [URL], state: AppState) async {
         guard let url = urls.first else { return }
+        guard !state.isChatSending else {
+            state.noteMessage = "Wait for the current answer before attaching another file."
+            state.view = .note
+            return
+        }
+        ClaudeService.shared.clearConversation()
+        state.chatHistory = []
         let name = url.lastPathComponent
 
         // Start animation immediately — do NOT block on file copy.
@@ -61,11 +68,9 @@ enum FileDropHandler {
         // Copy to inbox in background — update state when done
         let inbox = HookServer.supportDir.appendingPathComponent("inbox")
         Task.detached {
-            try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
-            let dest = inbox.appendingPathComponent(name)
-            try? FileManager.default.removeItem(at: dest)
-            if (try? FileManager.default.copyItem(at: url, to: dest)) != nil {
+            if let dest = try? ChatSafety.copyAttachment(url, to: inbox) {
                 await MainActor.run {
+                    guard state.droppedFile?.url == url else { return }
                     state.droppedFile = DroppedFile(url: dest, name: name)
                     state.promptContext = .file(name: name, fileURL: dest)
                 }

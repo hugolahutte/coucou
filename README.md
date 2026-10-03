@@ -4,6 +4,70 @@
 
 # Coucou
 
+## This fork — conversation inbox (Mac preview)
+
+This fork keeps Mochi and adds **Mes réponses à traiter**, available from the
+menu bar and the tray button in the notch header. Replies and ordered drafts are
+saved locally, separately for **ChatGPT Mac**, **Claude Cobra**, and **Claude HL**.
+You can mark replies as pending, deferred, or done. Drafts are copied for sending
+in the original chat; Coucou does not send them automatically.
+
+**Current integration status:** ChatGPT Mac and Claude Cobra use explicit import
+of a copied response. Automatic capture from these native apps is not implemented.
+The optional `browser-extension/` can import the latest recognized Claude or
+ChatGPT web response and experimentally follow selected conversations. Its DOM
+selectors have automated fixture tests but have not been validated against a live
+signed-in conversation. Verify the first imported response before relying on it.
+
+### Try the browser connector
+
+1. Load `browser-extension/` as an unpacked extension in `chrome://extensions`.
+2. Copy its extension ID and run `python3 native-bridge/install.py EXTENSION_ID`.
+   This registers only that extension and uses the Python interpreter you ran.
+3. Launch Coucou, open a Claude HL conversation, and choose **Claude · HL** in the
+   extension popup. Select **Suivre cette conversation**, then **Ajouter la dernière réponse**.
+4. Check the result in **Mes réponses à traiter**. Following is opt-in for each
+   conversation. Stop following from the same popup.
+
+The connector uses Chrome native messaging and the app's owner-only Unix socket;
+it has no server, sends no data to another provider, and reads no cookies or keys.
+Keep Coucou running to receive responses. Capture failures are retried while the
+tracked page is open; there is no offline response archive in the extension.
+Import a copied response if a website update prevents recognition.
+
+### Build and verify this fork
+
+The existing Xcode build instructions still apply. For a local preview on the
+current Mac, the Command Line Tools can build a downloadable app:
+
+```sh
+bash scripts/build-mac-preview.sh /absolute/output/directory
+```
+
+The preview is signed locally (ad hoc), not notarized for distribution. The
+script builds and packages it without launching or installing it. It preserves
+the original bundle identifier and therefore shares the original app's settings;
+quit the original Coucou before running the preview.
+
+Additional checks:
+
+```sh
+bash scripts/test-conversation-inbox.sh
+node --test tests/browser-*.test.mjs
+python3 tests/test_native_bridge.py
+```
+
+The inbox tests cover account isolation, ordered drafts, duplicate delivery,
+restart persistence, failed-save rollback, corrupt-data preservation, and input
+validation. Chat regressions cover full multi-block responses, explicit approval
+targets and distinct file copies. The existing chat now serializes sends and resets
+the conversation when a new file is dropped. Text attachments are included for
+OpenAI-compatible providers; unsupported binary attachments produce an explicit
+error. Approval/question timeouts use unique request IDs rather than recyclable
+socket descriptors.
+
+---
+
 **A tiny friend that lives in your Mac's notch — or at the top of your screen on Windows and Linux — and keeps an eye on your AI coding agent sessions.**
 
 Approve permissions, watch your agents work, drop a file, chat with Claude — all without leaving what you're doing.

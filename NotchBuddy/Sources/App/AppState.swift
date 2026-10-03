@@ -284,6 +284,7 @@ final class AppState: ObservableObject {
 
     // Chat conversation history
     @Published var chatHistory: [ChatMessage] = []
+    @Published var isChatSending = false
 
     // Pending approval request from Claude Code hook
     @Published var pendingApproval: ApprovalInfo? = nil
