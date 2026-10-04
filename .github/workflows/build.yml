@@ -33,6 +33,24 @@ jobs:
       - name: Test ask question
         run: bash scripts/test-ask-question.sh
 
+      - name: Test conversation inbox and chat safety
+        run: bash scripts/test-conversation-inbox.sh
+
+      - name: Test collapsible conversation bar
+        run: bash scripts/test-conversation-bar.sh
+
+      - name: Test Claude desktop capture
+        run: bash scripts/test-claude-desktop.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test browser connector
+        run: |
+          node --test tests/browser-*.test.mjs
+          python3 tests/test_native_bridge.py
+
       - name: Build
         run: |
           xcodebuild \

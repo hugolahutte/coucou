@@ -101,14 +101,19 @@ struct IslandContainer: View {
                     Rectangle().frame(width: islandWidth,
                                       height: state.mode == .expanded ? 320 : islandHeight)
                 }
-                .opacity(uploadActive || greetingActive ? 0 : 1)
+                .opacity(uploadActive || greetingActive || (state.mode == .expanded && state.permanentConversationBar && state.view == .overview) ? 0 : 1)
                 .animation(.easeInOut(duration: 0.25), value: uploadActive || greetingActive)
 
-            CountdownBar(state: state, islandW: islandWidth)
+            if !(state.permanentConversationBar && state.view == .overview) {
+                CountdownBar(state: state, islandW: islandWidth)
+            }
 
             Group {
                 if state.mode == .compact {
-                    CompactMiniGrid(state: state)
+                    Group {
+                        if state.permanentConversationBar { CompactConversationSummary() }
+                        else { CompactMiniGrid(state: state) }
+                    }
                         .scaleEffect(IslandRestingLayout(width: islandWidth, height: islandHeight).miniGridScale)
                         .position(x: islandWidth - 40, y: islandHeight / 2)
                         .transition(.opacity)
@@ -122,7 +127,7 @@ struct IslandContainer: View {
             let anim = shrinking ? closeEase : openSpring
             let (w, h) = islandSize(mode: newMode, view: state.view,
                                     progress: state.uploadProgress,
-                                    nw: state.notchWidth, nh: state.notchHeight)
+                                    nw: state.notchWidth, nh: state.notchHeight, conversationMode: state.permanentConversationBar)
             let cr  = newMode == .expanded ? IslandConst.expandedCorner : IslandConst.roundedCorner
             let tr: CGFloat = 0
             withAnimation(anim) {
@@ -141,7 +146,7 @@ struct IslandContainer: View {
             }
             let (w, h) = islandSize(mode: .expanded, view: newView,
                                     progress: state.uploadProgress,
-                                    nw: state.notchWidth, nh: state.notchHeight)
+                                    nw: state.notchWidth, nh: state.notchHeight, conversationMode: state.permanentConversationBar)
             withAnimation(openSpring) {
                 islandWidth  = w
                 islandHeight = newView == .prompt ? chatPromptHeight : h
@@ -154,7 +159,7 @@ struct IslandContainer: View {
         .onAppear {
             let (w, h) = islandSize(mode: state.mode, view: state.view,
                                     progress: state.uploadProgress,
-                                    nw: state.notchWidth, nh: state.notchHeight)
+                                    nw: state.notchWidth, nh: state.notchHeight, conversationMode: state.permanentConversationBar)
             islandWidth      = w
             islandHeight     = state.view == .prompt ? chatPromptHeight : h
             cornerRadius     = state.mode == .expanded ? IslandConst.expandedCorner : IslandConst.roundedCorner
@@ -437,7 +442,7 @@ struct IslandContentView: View {
                     // Views that fill available height instead of the fixed 98pt content frame:
                     // chat (prompt) is always flexible; mail is flexible only when active so
                     // it doesn't push the ZStack taller when inactive.
-                    let isTall = v == .prompt || (v == .mail && active)
+                    let isTall = v == .prompt || (v == .mail && active) || (v == .overview && state.permanentConversationBar && active)
                     let anim: Animation = active
                         ? .spring(response: 0.4, dampingFraction: 0.8).delay(0.16)
                         : .easeIn(duration: 0.16)
@@ -478,6 +483,12 @@ struct IslandHeader: View {
                     #endif
                 })
                 TabButton(icon: "plus", view: .upload, state: state)
+                InboxNotchButton()
+                if state.permanentConversationBar {
+                    Button { NotificationCenter.default.post(name: .islandCollapse, object: nil) } label: {
+                        Image(systemName: "chevron.up").font(.system(size: 12, weight: .semibold))
+                    }.buttonStyle(.plain).help("Replier la barre")
+                }
             }
             .padding(.leading, 14)
 

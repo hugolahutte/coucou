@@ -37,6 +37,12 @@ final class AppState: ObservableObject {
 
     // Pinned (alerts that stay open, never auto-close)
     var isPinned: Bool = false
+    @Published var permanentConversationBar = UserDefaults.standard.object(forKey: "permanentConversationBar") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(permanentConversationBar, forKey: "permanentConversationBar")
+            NotificationCenter.default.post(name: .conversationBarModeChanged, object: nil)
+        }
+    }
 
     // Upload progress (0-1) — set to 1.0 only at completion; animation is time-based
     @Published var uploadProgress: Double = 0
@@ -284,6 +290,7 @@ final class AppState: ObservableObject {
 
     // Chat conversation history
     @Published var chatHistory: [ChatMessage] = []
+    @Published var isChatSending = false
 
     // Pending approval request from Claude Code hook
     @Published var pendingApproval: ApprovalInfo? = nil

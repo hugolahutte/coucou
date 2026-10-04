@@ -187,6 +187,7 @@ final class ClaudeService {
     private var conversationMessages: [[String: Any]] = []
 
     func clearConversation() {
+        guard !AppState.shared.isChatSending else { return }
         conversationMessages = []
     }
 
@@ -216,7 +217,18 @@ final class ClaudeService {
 
     // MARK: - Chat (multi-turn, natural text + web search)
 
-    func chat(query: String, context: PromptContext?, state: AppState) async {
+    @discardableResult
+    func sendChat(query: String, context: PromptContext?, state: AppState) -> Bool {
+        guard !state.isChatSending else { return false }
+        state.isChatSending = true
+        Task {
+            defer { state.isChatSending = false }
+            await chat(query: query, context: context, state: state)
+        }
+        return true
+    }
+
+    private func chat(query: String, context: PromptContext?, state: AppState) async {
         guard state.chatProvider == .anthropic else {
             await chatOpenAICompatible(query: query, context: context, state: state)
             return
@@ -266,7 +278,7 @@ final class ClaudeService {
 
     // MARK: - OpenAI-compatible chat (Google Gemini / OpenAI / Ollama / LM Studio)
 
-    func chatOpenAICompatible(query: String, context: PromptContext?, state: AppState) async {
+    private func chatOpenAICompatible(query: String, context: PromptContext?, state: AppState) async {
         let provider = state.chatProvider
         guard provider != .anthropic else { return }
 
@@ -323,7 +335,7 @@ final class ClaudeService {
                 if let u = url { prefix += ", URL: \(u)" }
                 userText = prefix + "\n\n" + query
             case .file(let name, let fileURL):
-                if provider.isLocal, let fileURL = fileURL {
+                if let fileURL = fileURL {
                     let ext = fileURL.pathExtension.lowercased()
                     let binaryExts = ["pdf", "jpg", "jpeg", "png", "gif", "webp"]
                     if !binaryExts.contains(ext),
@@ -333,7 +345,8 @@ final class ClaudeService {
                             : text
                         userText = "File: \(name)\n\n\(truncated)\n\n" + query
                     } else {
-                        userText = "File: \(name)\n\n" + query
+                        await showError("This provider cannot read this attachment yet. Choose Anthropic for PDF/images or attach a text file.", state: state)
+                        return
                     }
                 } else {
                     userText = "File: \(name)\n\n" + query
@@ -541,8 +554,8 @@ final class ClaudeService {
         // Store full content (includes tool_use/tool_result blocks) for correct multi-turn context
         conversationMessages.append(["role": "assistant", "content": content])
 
-        guard let textBlock = content.first(where: { $0["type"] as? String == "text" }),
-              let text = textBlock["text"] as? String, !text.isEmpty else {
+        let text = ChatSafety.text(from: content)
+        guard !text.isEmpty else {
             await showError("No response text.", state: state)
             return
         }
@@ -560,12 +573,12 @@ final class ClaudeService {
     private func handleResult(_ data: Data, state: AppState) async {
         // Extract text from Anthropic response (may contain tool_use / web_search_tool_result blocks)
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = json["content"] as? [[String: Any]],
-              let textBlock = content.first(where: { $0["type"] as? String == "text" }),
-              let text = textBlock["text"] as? String else {
+              let content = json["content"] as? [[String: Any]] else {
             await showError("Unexpected API response.", state: state)
             return
         }
+
+        let text = ChatSafety.text(from: content)
 
         // Strip markdown code fences if present, then extract JSON object
         let cleanText: String

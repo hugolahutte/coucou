@@ -68,7 +68,7 @@ targets:
         NSHighResolutionCapable: YES
         NSSupportsAutomaticGraphicsSwitching: YES
         NSAppleEventsUsageDescription: "Pour sauter au terminal, envoyer des mails et piloter Musique."
-        NSAccessibilityUsageDescription: "Pour lire le titre de la fenêtre active et l'attacher comme contexte."
+        NSAccessibilityUsageDescription: "Pour lire les réponses des conversations Claude Mac choisies et le titre de la fenêtre active."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     settings:

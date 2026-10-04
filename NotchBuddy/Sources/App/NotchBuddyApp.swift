@@ -9,5 +9,12 @@ struct NotchBuddyApp: App {
         Settings {
             SettingsView()
         }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Mes réponses à traiter…") {
+                    NotificationCenter.default.post(name: .openConversationInbox, object: nil)
+                }.keyboardShortcut("i", modifiers: .command)
+            }
+        }
     }
 }

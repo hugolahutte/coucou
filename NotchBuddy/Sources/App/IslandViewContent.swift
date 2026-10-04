@@ -38,6 +38,10 @@ struct OverviewView: View {
     var agent: AgentTask? { state.focusTask }
 
     var body: some View {
+        Group {
+        if state.permanentConversationBar {
+            PermanentConversationBar(state: state)
+        } else {
         HStack(spacing: 10) {
             // Left card: title row + ticker below + ↗ button overlay
             ZStack(alignment: .topLeading) {
@@ -53,7 +57,11 @@ struct OverviewView: View {
                                 Circle()
                                     .fill(Color(hex: agent.color))
                                     .frame(width: 7, height: 7)
-                                Text(agent.name)
+                                Button(action: { openAgentTarget(agent) }) {
+                                    Text(agent.name)
+                                }
+                                    .buttonStyle(.plain)
+                                    .help("Ouvrir la conversation")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(Color(hex: "#F5F6F8"))
                                     .lineLimit(1)
@@ -130,6 +138,8 @@ struct OverviewView: View {
                 AgentPillsView(state: state)
             }
         }
+        }
+        }
         .onChange(of: state.focusId) { _, _ in
             showingN8nDetail = false
             #if !APPSTORE
@@ -148,6 +158,10 @@ struct OverviewView: View {
 
     private func openAgentTarget(_ task: AgentTask?) {
         guard let task else { return }
+        if let title = task.claudeActivityTitle {
+            Task { @MainActor in await ClaudeDesktopMonitor.shared.openActivity(title: title) }
+            return
+        }
         switch task.id {
         case "integration_claude":
             let vscodeBundleId = "com.microsoft.VSCode"
@@ -1037,7 +1051,7 @@ struct PromptView: View {
                             .foregroundColor(Color(hex: "#0B0C0E"))
                     }
                     .buttonStyle(SendButtonStyle())
-                    .disabled(text.isEmpty)
+                    .disabled(text.isEmpty || state.isChatSending)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Color.white.opacity(0.07))
@@ -1051,6 +1065,9 @@ struct PromptView: View {
         }
         .padding(.bottom, 10)
         .onAppear { focused = true }
+        .onChange(of: state.isChatSending) { _, sending in
+            if !sending { focused = true }
+        }
         .onChange(of: state.view) { _, view in
             if view == .prompt {
                 state.fetchModelsIfNeeded(for: state.chatProvider)
@@ -1065,15 +1082,12 @@ struct PromptView: View {
 
     private func sendMessage() {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return }
+        guard !query.isEmpty, !state.isChatSending else { return }
+        guard ClaudeService.shared.sendChat(query: query, context: state.promptContext, state: state) else { return }
         text = ""
         focused = false
         state.chatHistory.append(ChatMessage(role: .user, content: query))
         state.stateOverride = .thinking
-        Task {
-            await ClaudeService.shared.chat(query: query, context: state.promptContext, state: state)
-            await MainActor.run { focused = true }
-        }
     }
 }
 
@@ -1152,6 +1166,7 @@ struct ModelPickerView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .disabled(state.isChatSending)
 
             Divider().opacity(0.2)
 
