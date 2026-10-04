@@ -4,7 +4,9 @@ import AppKit
 /// The notch stays compact; reading and composing happen in a normal Mac window.
 struct ConversationInboxView: View {
     @ObservedObject var store = ConversationInboxStore.shared
+    @ObservedObject private var appState = AppState.shared
     @State private var selectedConversation: UUID?
+    @State private var selectedSpace: ConversationSpace?
     @State private var filter: InboxStatus = .pending
     @State private var draft = ""
     @State private var importing = false
@@ -14,7 +16,10 @@ struct ConversationInboxView: View {
     private var conversations: [TrackedConversation] { store.inbox.conversations }
     private var conversation: TrackedConversation? { conversations.first { $0.id == selectedConversation } }
     private var replies: [InboxReply] {
-        store.inbox.replies.filter { $0.status == filter && (selectedConversation == nil || $0.conversationID == selectedConversation) }
+        store.inbox.replies.filter { reply in
+            reply.status == filter && (selectedConversation == nil || reply.conversationID == selectedConversation)
+                && (selectedSpace == nil || conversations.contains { $0.id == reply.conversationID && $0.space == selectedSpace })
+        }
             .sorted { $0.receivedAt > $1.receivedAt }
     }
 
@@ -22,6 +27,7 @@ struct ConversationInboxView: View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Mes conversations").font(.headline)
+                Toggle("Garder mes trois espaces dans la barre", isOn: $appState.permanentConversationBar)
                 List(selection: $selectedConversation) {
                     ForEach(ConversationSpace.allCases) { space in
                         Section(space.label) {
@@ -36,7 +42,7 @@ struct ConversationInboxView: View {
                         }
                     }
                 }
-                Button("Toutes les conversations") { selectedConversation = nil }
+                Button("Toutes les conversations") { selectedConversation = nil; selectedSpace = nil }
                 Button("Ajouter une réponse…", systemImage: "plus") { importing = true }
                 Button("Connecter Claude Mac…", systemImage: "link") { connectingClaude = true }
                 Text("Claude Mac : suivi des conversations choisies. ChatGPT Mac : import d’une réponse copiée. HL : connecteur Chrome.")
@@ -45,7 +51,7 @@ struct ConversationInboxView: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text(conversation?.title ?? "Mes réponses à traiter").font(.title2.bold())
+                    Text(conversation?.title ?? selectedSpace?.label ?? "Mes réponses à traiter").font(.title2.bold())
                     Spacer()
                     if let conversation { Button(conversation.url == nil ? "Ouvrir l’application" : "Ouvrir le chat") { open(conversation) } }
                 }
@@ -108,7 +114,16 @@ struct ConversationInboxView: View {
         .frame(minWidth: 760, minHeight: 540)
         .sheet(isPresented: $importing) { ImportConversationReplyView(store: store, selectedConversation: $selectedConversation) }
         .sheet(isPresented: $connectingClaude) { ClaudeDesktopConnectionView() }
-        .onChange(of: selectedConversation) { _, _ in draft = ""; copiedDraft = nil }
+        .onChange(of: selectedConversation) { _, id in
+            draft = ""; copiedDraft = nil
+            if let id { selectedSpace = conversations.first { $0.id == id }?.space }
+        }
+        .onReceive(store.$requestedSpace) { space in
+            if let space { selectedSpace = space; selectedConversation = store.requestedConversation; filter = .pending }
+        }
+        .onAppear {
+            if let space = store.requestedSpace { selectedSpace = space; selectedConversation = store.requestedConversation }
+        }
     }
 
     private func statusButton(_ title: String, _ reply: InboxReply, _ status: InboxStatus) -> some View {

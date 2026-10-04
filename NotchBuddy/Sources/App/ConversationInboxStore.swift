@@ -9,6 +9,8 @@ extension Notification.Name {
 final class ConversationInboxStore: ObservableObject {
     static let shared = ConversationInboxStore()
     @Published private(set) var inbox = ConversationInbox()
+    @Published var requestedConversation: UUID?
+    @Published var requestedSpace: ConversationSpace?
     @Published var errorMessage: String?
     private let persistence: InboxPersistence
     private var loadFailed = false

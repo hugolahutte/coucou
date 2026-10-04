@@ -38,6 +38,10 @@ struct OverviewView: View {
     var agent: AgentTask? { state.focusTask }
 
     var body: some View {
+        Group {
+        if state.permanentConversationBar {
+            PermanentConversationBar(state: state)
+        } else {
         HStack(spacing: 10) {
             // Left card: title row + ticker below + ↗ button overlay
             ZStack(alignment: .topLeading) {
@@ -133,6 +137,8 @@ struct OverviewView: View {
             CardBackground(wash: nil) {
                 AgentPillsView(state: state)
             }
+        }
+        }
         }
         .onChange(of: state.focusId) { _, _ in
             showingN8nDetail = false

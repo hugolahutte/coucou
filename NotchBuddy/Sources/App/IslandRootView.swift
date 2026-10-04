@@ -101,10 +101,12 @@ struct IslandContainer: View {
                     Rectangle().frame(width: islandWidth,
                                       height: state.mode == .expanded ? 320 : islandHeight)
                 }
-                .opacity(uploadActive || greetingActive ? 0 : 1)
+                .opacity(uploadActive || greetingActive || (state.permanentConversationBar && state.view == .overview) ? 0 : 1)
                 .animation(.easeInOut(duration: 0.25), value: uploadActive || greetingActive)
 
-            CountdownBar(state: state, islandW: islandWidth)
+            if !(state.permanentConversationBar && state.view == .overview) {
+                CountdownBar(state: state, islandW: islandWidth)
+            }
 
             Group {
                 if state.mode == .compact {

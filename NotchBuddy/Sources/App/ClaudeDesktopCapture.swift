@@ -17,9 +17,9 @@ struct ClaudeDesktopReply: Equatable, Sendable {
     var isComplete: Bool
 }
 
-enum ClaudeDesktopActivityState: String, Sendable { case working, waiting, unread }
+enum ClaudeDesktopActivityState: String, Codable, Sendable { case working, waiting, unread }
 
-struct ClaudeDesktopActivity: Equatable, Sendable {
+struct ClaudeDesktopActivity: Codable, Equatable, Sendable {
     var title: String
     var state: ClaudeDesktopActivityState
     var label: String {

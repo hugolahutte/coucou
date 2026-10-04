@@ -12,6 +12,7 @@ final class ClaudeDesktopMonitor: ObservableObject {
     @Published private(set) var reading = false
     @Published private(set) var activities: [ClaudeDesktopActivity] = []
     @Published private(set) var diagnostic = ""
+    @Published private(set) var rememberedActivities: [ClaudeDesktopActivity] = []
     private var activityUpdatedAt = Date.distantPast
     @Published private(set) var followed: [String]
     private var timer: Timer?
@@ -24,6 +25,8 @@ final class ClaudeDesktopMonitor: ObservableObject {
         self.defaults = defaults
         enabled = defaults.bool(forKey: "claudeDesktopCaptureEnabled")
         followed = defaults.stringArray(forKey: "claudeDesktopFollowedURLs") ?? []
+        if let data = defaults.data(forKey: "claudeDesktopActivityHistory"),
+           let items = try? JSONDecoder().decode([ClaudeDesktopActivity].self, from: data) { rememberedActivities = Array(items.prefix(50)) }
     }
 
     func start() {
@@ -128,6 +131,13 @@ final class ClaudeDesktopMonitor: ObservableObject {
     private func updateActivities(_ items: [ClaudeDesktopActivity]) {
         activityUpdatedAt = Date()
         activities = items
+        if !items.isEmpty {
+            let next = Array((items + rememberedActivities.filter { old in !items.contains { $0.title == old.title } }).prefix(50))
+            if next != rememberedActivities {
+                rememberedActivities = next
+                if let data = try? JSONEncoder().encode(next) { defaults.set(data, forKey: "claudeDesktopActivityHistory") }
+            }
+        }
         let state = AppState.shared
         let prefix = "claude-mac-activity:"
         let ids = items.map { item in

@@ -24,6 +24,19 @@ ChatGPT web response and experimentally follow selected conversations. Its DOM
 selectors have automated fixture tests but have not been validated against a live
 signed-in conversation. Verify the first imported response before relying on it.
 
+### Permanent conversation bar
+
+The home view now keeps ChatGPT Mac, Claude Cobra and Claude HL in three persistent
+columns. Each space opens its reply inbox; conversation rows show pending replies
+and ordered draft counts. The bar stays expanded on Home and replaces the default
+integration cards. Disable it with **Garder mes trois espaces dans la barre** in
+the inbox or the inbox icon’s context menu. Alerts and other views still work.
+
+Previously observed Claude sidebar titles are retained locally (up to 50).
+When a current read cannot confirm an activity, its label becomes **État à vérifier**;
+it is never presented as live work. This mode does not add automatic ChatGPT capture
+or retrieve hidden browser conversations.
+
 ### Connect Claude Mac (Cobra)
 
 Open **Mes réponses à traiter → Connecter Claude Mac…**, enable the reader, and

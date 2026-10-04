@@ -199,7 +199,12 @@ final class IslandWindowController: NSWindowController {
             self?.fsm.greetComplete()
         }
 
-        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil }
+        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil || (AppState.shared.permanentConversationBar && AppState.shared.view == .overview) }
+        NotificationCenter.default.addObserver(forName: .conversationBarModeChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            if self.state.permanentConversationBar { self.fsm.openedExternally(); self.expand(to: self.defaultView()) }
+            else { self.collapse() }
+        }
     }
 
     // MARK: - 60 Hz polling loop
@@ -710,6 +715,7 @@ final class IslandWindowController: NSWindowController {
 
     func defaultView() -> IslandView {
         if state.pendingApproval != nil { return .approval }
+        if state.permanentConversationBar { return .overview }
         return state.tasks.isEmpty ? .empty : .overview
     }
 
