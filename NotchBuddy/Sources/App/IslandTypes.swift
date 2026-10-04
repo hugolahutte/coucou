@@ -58,6 +58,7 @@ struct AgentTask: Identifiable, Equatable {
     var emote: BotEmote? = nil
     var miniEye: EyeShape? = nil
     var pillBadge: PillBadge? = nil  // alert badge shown on pill when not focused
+    var claudeActivityTitle: String? = nil  // native sidebar navigation, only on an explicit user click
     var sessionCwd: String?  = nil  // last known working directory (Claude Code sessions)
 }
 

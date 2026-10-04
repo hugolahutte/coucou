@@ -53,7 +53,11 @@ struct OverviewView: View {
                                 Circle()
                                     .fill(Color(hex: agent.color))
                                     .frame(width: 7, height: 7)
-                                Text(agent.name)
+                                Button(action: { openAgentTarget(agent) }) {
+                                    Text(agent.name)
+                                }
+                                    .buttonStyle(.plain)
+                                    .help("Ouvrir la conversation")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(Color(hex: "#F5F6F8"))
                                     .lineLimit(1)
@@ -148,6 +152,10 @@ struct OverviewView: View {
 
     private func openAgentTarget(_ task: AgentTask?) {
         guard let task else { return }
+        if let title = task.claudeActivityTitle {
+            Task { @MainActor in await ClaudeDesktopMonitor.shared.openActivity(title: title) }
+            return
+        }
         switch task.id {
         case "integration_claude":
             let vscodeBundleId = "com.microsoft.VSCode"

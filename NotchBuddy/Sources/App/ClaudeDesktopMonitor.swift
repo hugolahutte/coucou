@@ -112,6 +112,19 @@ final class ClaudeDesktopMonitor: ObservableObject {
         status = saved ? "Réponse enregistrée dans Claude · Cobra." : "Sauvegarde impossible : \(store.errorMessage ?? "réessaie")"
     }
 
+    func openActivity(title: String) async {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else {
+            status = "Claude n’est plus ouvert."; return
+        }
+        app.activate(options: [.activateIgnoringOtherApps])
+        guard hasPermission else { status = "Autorise Coucou dans Accessibilité pour ouvrir cette conversation."; return }
+        let pid = app.processIdentifier
+        let opened = await Task.detached(priority: .userInitiated) {
+            ClaudeDesktopAXReader.selectActivity(pid: pid, title: title)
+        }.value
+        status = opened ? "Conversation ouverte dans Claude." : "Claude est ouvert, mais cette conversation n’est plus visible ou son titre est ambigu."
+    }
+
     private func updateActivities(_ items: [ClaudeDesktopActivity]) {
         activityUpdatedAt = Date()
         activities = items
@@ -127,7 +140,8 @@ final class ClaudeDesktopMonitor: ObservableObject {
             let botState: BotState = item.state == .working ? .working : item.state == .unread ? .finished : .idle
             let task = AgentTask(id: id, name: "Claude · \(item.title)", color: "#E07950",
                                  state: botState, steps: [item.label], source: .agent,
-                                 pillBadge: item.state == .unread ? .finished : nil)
+                                 pillBadge: item.state == .unread ? .finished : nil,
+                                 claudeActivityTitle: item.title)
             if let index = state.tasks.firstIndex(where: { $0.id == id }) {
                 if state.tasks[index] != task { state.tasks[index] = task }
             } else { state.addTask(task); added = true }
@@ -169,7 +183,8 @@ private struct ClaudeDesktopAXRead: Sendable {
     var diagnostic: String
 }
 
-/// No clicks, keystrokes, clipboard, credential files, screenshots or network requests.
+/// Polling is read-only. Sidebar navigation is permitted only by an explicit user click.
+/// No keystrokes, clipboard, credential files, screenshots or network requests.
 private enum ClaudeDesktopAXReader {
     static func read(pid: pid_t) -> ClaudeDesktopAXRead {
         #if APPSTORE
@@ -234,6 +249,42 @@ private enum ClaudeDesktopAXReader {
         // Counts only: never include a title, URL, account identifier or reply in diagnostics.
         let diagnostic = "\(failure ?? "Read complete"); nodes=\(8000 - remaining); areas=\(areas); conversations=\(links); headings=\(headings); texts=\(texts)"
         return ClaudeDesktopAXRead(tree: failure == nil ? result : nil, diagnostic: diagnostic)
+        #endif
+    }
+
+    static func selectActivity(pid: pid_t, title: String) -> Bool {
+        #if APPSTORE
+        return false
+        #else
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.3)
+        guard let window = attribute(app, kAXFocusedWindowAttribute) ?? attribute(app, kAXMainWindowAttribute),
+              CFGetTypeID(window) == AXUIElementGetTypeID() else { return false }
+        var matches: [AXUIElement] = []
+        var remaining = 8000
+        var complete = true
+        let deadline = Date().addingTimeInterval(8)
+        func walk(_ element: AXUIElement, depth: Int, inSidebar: Bool) {
+            guard depth < 80, remaining > 0, Date() < deadline else { complete = false; return }
+            remaining -= 1
+            guard let role = attribute(element, kAXRoleAttribute) as? String else { complete = false; return }
+            if ["AXTextArea", "AXTextField", "AXSecureTextField"].contains(role) { return }
+            let label = ClaudeDesktopParser.accessibleLabel(
+                description: attribute(element, kAXDescriptionAttribute) as? String,
+                title: attribute(element, kAXTitleAttribute) as? String)
+            if !inSidebar && ["Messages de la conversation", "Conversation messages"].contains(label) { return }
+            let sidebar = inSidebar || ["Barre latérale", "Sidebar"].contains(label)
+            if sidebar, role == "AXButton" {
+                let root = ClaudeAXNode(role: "AXGroup", label: "Sidebar", children: [ClaudeAXNode(role: role, label: label)])
+                if ClaudeDesktopParser.activities(root)?.first?.title == title { matches.append(element) }
+            }
+            for child in attribute(element, kAXChildrenAttribute) as? [AXUIElement] ?? [] {
+                walk(child, depth: depth + 1, inSidebar: sidebar)
+            }
+        }
+        walk(window as! AXUIElement, depth: 0, inSidebar: false)
+        guard complete, matches.count == 1 else { return false }
+        return AXUIElementPerformAction(matches[0], kAXPressAction as CFString) == .success
         #endif
     }
 
