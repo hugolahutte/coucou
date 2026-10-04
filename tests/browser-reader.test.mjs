@@ -26,3 +26,8 @@ test('never treat a recognized streaming response as finished', () => {
   assert.equal(reader.generating({ querySelector: () => ({}) }), true);
   assert.equal(reader.generating({ querySelector: () => null }), false);
 });
+
+test('Cowork sessions are conversations but project and native task pages are not', () => {
+  assert.equal(reader.conversation('https://claude.ai/cowork/cse_01abc-DEF').id, '/cowork/cse_01abc-DEF');
+  for (const path of ['/cowork/', '/cowork/projects', '/cowork/project/abc', '/cowork/cse_', '/cowork/cse_abc/other', '/epitaxy/local_abc']) assert.equal(reader.conversation('https://claude.ai' + path), null);
+});

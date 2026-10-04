@@ -16,7 +16,10 @@ enum ConversationSpace: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .chatgptMac: return url.host == "chatgpt.com" && url.path.hasPrefix("/c/") && url.path.count > 3 && url.query == nil && url.fragment == nil
         case .claudeCobra: return url.host == "claude.ai" && ["/chat/", "/epitaxy/", "/cowork/"].contains { url.path.hasPrefix($0) && url.path.count > $0.count } && url.query == nil && url.fragment == nil
-        case .claudeHL: return url.host == "claude.ai" && url.path.hasPrefix("/chat/") && url.path.count > 6 && url.query == nil && url.fragment == nil
+        case .claudeHL:
+            let isChat = url.path.hasPrefix("/chat/") && url.path.count > 6
+            let isCowork = url.path.range(of: #"^/cowork/cse_[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil
+            return url.host == "claude.ai" && (isChat || isCowork) && url.query == nil && url.fragment == nil
         }
     }
 }

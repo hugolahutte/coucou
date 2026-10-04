@@ -4,6 +4,10 @@ import Foundation
 struct ConversationInboxTests {
     static func check(_ condition: Bool, _ message: String = "Unexpected result") throws { precondition(condition, message) }
     static func main() throws {
+        precondition(ConversationSpace.claudeHL.accepts(url: URL(string: "https://claude.ai/cowork/cse_01abc-DEF")!))
+        for path in ["/cowork/projects", "/cowork/cse_", "/cowork/cse_abc/other", "/epitaxy/local_abc"] {
+            precondition(!ConversationSpace.claudeHL.accepts(url: URL(string: "https://claude.ai" + path)!))
+        }
         var inbox = ConversationInbox()
         let cobra = try inbox.conversation(space: .claudeCobra, title: "Même titre", externalID: "manual:cobra")
         let hl = try inbox.conversation(space: .claudeHL, title: "Même titre", externalID: "/chat/abc", url: URL(string: "https://claude.ai/chat/abc")!)

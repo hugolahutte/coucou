@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Chrome native messaging → Coucou's owner-only Unix socket. No network requests."""
 import json
+import re
 from pathlib import Path
 import socket
 import struct
@@ -42,9 +43,9 @@ def validate(message):
             raise ValueError("Réponse invalide")
     url = urlsplit(message["url"])
     prefix = "/c/" if space == "chatgptMac" else "/chat/"
+    valid_path = (url.path.startswith(prefix) and len(url.path) > len(prefix)) or (space != "chatgptMac" and re.fullmatch(r"/cowork/cse_[A-Za-z0-9_-]+", url.path) is not None)
     if (url.scheme != "https" or url.hostname != SPACES[space] or url.username or url.password
-            or url.port not in (None, 443) or not url.path.startswith(prefix)
-            or len(url.path) <= len(prefix) or url.path != message["conversation_id"]
+            or url.port not in (None, 443) or not valid_path or url.path != message["conversation_id"]
             or url.query or url.fragment):
         raise ValueError("Lien de conversation invalide")
     return {key: message[key] for key in ("coucou_kind", "space", "title", "message_id", "text", "conversation_id", "url")}

@@ -28,6 +28,13 @@ class BridgeTests(unittest.TestCase):
     def test_limits_and_provider_identity(self):
         for changes in ({"space": "chatgptMac"}, {"text": "é" * 100001}, {"space": []}, {"url": "https://claude.ai.evil.test/chat/abc"}, {"url": "https://user:pass@claude.ai/chat/abc"}, {"url": "https://claude.ai/chat/abc?token=secret"}, {"coucou_kind": "PermissionRequest"}):
             with self.assertRaises(ValueError): bridge.validate(self.event() | changes)
+    def test_cowork_session_paths(self):
+        for path in ("/cowork/cse_01abc-DEF", "/cowork/projects", "/cowork/cse_", "/cowork/cse_abc/other", "/epitaxy/local_abc"):
+            event = self.event() | {"url": "https://claude.ai" + path, "conversation_id": path}
+            if path == "/cowork/cse_01abc-DEF":
+                self.assertEqual(bridge.validate(event), event)
+            else:
+                with self.assertRaises(ValueError): bridge.validate(event)
     def test_ignores_extra_fields(self):
         self.assertEqual(bridge.validate(self.event() | {"command": "never execute"}), self.event())
 

@@ -5,7 +5,9 @@ globalThis.CoucouReader = {
       const url = new URL(urlString);
       if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return null;
       const prefix = url.hostname === "claude.ai" ? "/chat/" : url.hostname === "chatgpt.com" ? "/c/" : null;
-      if (!prefix || !url.pathname.startsWith(prefix) || url.pathname.length <= prefix.length) return null;
+      const isChat = prefix && url.pathname.startsWith(prefix) && url.pathname.length > prefix.length;
+      const isCowork = url.hostname === "claude.ai" && /^\/cowork\/cse_[A-Za-z0-9_-]+$/.test(url.pathname);
+      if (!isChat && !isCowork) return null;
       return { id: url.pathname, url: `${url.origin}${url.pathname}`, provider: url.hostname === "claude.ai" ? "claude" : "chatgpt" };
     } catch { return null; }
   },

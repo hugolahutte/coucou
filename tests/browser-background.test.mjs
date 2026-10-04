@@ -59,3 +59,13 @@ test('ignore foreign extensions, origins and nested frames', async () => {
   assert.equal(await call({ type: 'capture', text: 'Response' }), null);
   assert.equal(sent.length, 0);
 });
+
+test('Cowork uses the same validated native delivery as classic chats', async () => {
+  const { sent, sender, call } = setup();
+  sender.url = 'https://claude.ai/cowork/cse_01abc';
+  assert.equal((await call({ type: 'capture', url: sender.url, text: 'Finished Cowork response' })).ok, true);
+  assert.equal(sent[0].payload.conversation_id, '/cowork/cse_01abc');
+  sender.url = 'https://claude.ai/cowork/projects';
+  assert.equal(await call({ type: 'capture', url: sender.url, text: 'Project text' }), null);
+  assert.equal(sent.length, 1);
+});
