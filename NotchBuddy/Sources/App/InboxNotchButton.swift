@@ -22,6 +22,7 @@ struct InboxNotchButton: View {
 }
 
 extension Notification.Name {
+    static let conversationBarExpand = Notification.Name("conversationBarExpand")
     static let conversationBarModeChanged = Notification.Name("conversationBarModeChanged")
 }
 
@@ -102,6 +103,7 @@ struct PermanentConversationBar: View {
 struct CompactConversationSummary: View {
     @ObservedObject private var store = ConversationInboxStore.shared
     var body: some View {
+        Button { NotificationCenter.default.post(name: .conversationBarExpand, object: nil) } label: {
         HStack(spacing: 5) {
             ForEach(ConversationSpace.allCases) { space in
                 VStack(spacing: 1) {
@@ -114,6 +116,7 @@ struct CompactConversationSummary: View {
                         .font(.system(size: 9, weight: .bold)).foregroundStyle(count > 0 ? Color.orange : Color.gray)
                 }
             }
-        }.frame(width: 70, height: 26).help("ChatGPT Mac · Claude Cobra · Claude HL — cliquer pour déplier")
+        }.frame(width: 70, height: 26)
+        }.buttonStyle(.plain).accessibilityLabel("Déplier les conversations").help("ChatGPT Mac · Claude Cobra · Claude HL — cliquer pour déplier")
     }
 }

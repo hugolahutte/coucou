@@ -201,6 +201,11 @@ final class IslandWindowController: NSWindowController {
 
         fsm.isHeldOpen = { AppState.shared.pendingApproval != nil }
         fsm.keepsCompactVisible = { AppState.shared.permanentConversationBar }
+        NotificationCenter.default.addObserver(forName: .conversationBarExpand, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            if self.fsm.state == .home { self.fsm.collapse() }
+            self.fsm.click()
+        }
         NotificationCenter.default.addObserver(forName: .conversationBarModeChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
             if self.state.permanentConversationBar { self.fsm.reveal() }
