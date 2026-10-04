@@ -128,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupIsland() {
         islandController = IslandWindowController()
         islandController?.showWindow(nil)
-        if AppState.shared.permanentConversationBar { islandController?.fsm.click() }
+        if AppState.shared.permanentConversationBar { islandController?.fsm.reveal() }
         else { islandController?.fsm.launch() }
         HookServer.shared.start()
         N8nPoller.shared.start()

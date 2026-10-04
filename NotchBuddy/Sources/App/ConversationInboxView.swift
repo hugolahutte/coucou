@@ -27,7 +27,7 @@ struct ConversationInboxView: View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Mes conversations").font(.headline)
-                Toggle("Garder mes trois espaces dans la barre", isOn: $appState.permanentConversationBar)
+                Toggle("Afficher mes trois espaces dans la barre", isOn: $appState.permanentConversationBar)
                 List(selection: $selectedConversation) {
                     ForEach(ConversationSpace.allCases) { space in
                         Section(space.label) {

@@ -16,7 +16,7 @@ struct InboxNotchButton: View {
             }.font(.system(size: 13)).foregroundColor(Color(hex: "#B0B5BE"))
         }.buttonStyle(.plain).help("Mes réponses à traiter")
         .contextMenu {
-            Toggle("Garder mes trois espaces dans la barre", isOn: Binding(get: { AppState.shared.permanentConversationBar }, set: { AppState.shared.permanentConversationBar = $0 }))
+            Toggle("Afficher mes trois espaces dans la barre", isOn: Binding(get: { AppState.shared.permanentConversationBar }, set: { AppState.shared.permanentConversationBar = $0 }))
         }
     }
 }
@@ -81,7 +81,7 @@ struct PermanentConversationBar: View {
                                     .font(.system(size: 10)).foregroundStyle(.gray)
                             }
                         }
-                    }.frame(height: 72)
+                    }.frame(height: 100)
                     Button("Ouvrir ma liste") { showInbox(space: space) }
                         .font(.system(size: 9)).buttonStyle(.plain).foregroundStyle(Color.orange)
                 }
@@ -95,5 +95,25 @@ struct PermanentConversationBar: View {
         store.requestedConversation = conversation
         store.requestedSpace = space
         NotificationCenter.default.post(name: .openConversationInbox, object: nil)
+    }
+}
+
+
+struct CompactConversationSummary: View {
+    @ObservedObject private var store = ConversationInboxStore.shared
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(ConversationSpace.allCases) { space in
+                VStack(spacing: 1) {
+                    Text(space == .chatgptMac ? "GPT" : space == .claudeCobra ? "C" : "HL")
+                        .font(.system(size: 7, weight: .semibold)).foregroundStyle(.gray)
+                    let count = store.inbox.replies.filter { reply in
+                        reply.status == .pending && store.inbox.conversations.contains { $0.id == reply.conversationID && $0.space == space }
+                    }.count
+                    Text(count > 99 ? "99+" : "\(count)")
+                        .font(.system(size: 9, weight: .bold)).foregroundStyle(count > 0 ? Color.orange : Color.gray)
+                }
+            }
+        }.frame(width: 70, height: 26).help("ChatGPT Mac · Claude Cobra · Claude HL — cliquer pour déplier")
     }
 }

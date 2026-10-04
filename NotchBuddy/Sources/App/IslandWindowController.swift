@@ -199,10 +199,11 @@ final class IslandWindowController: NSWindowController {
             self?.fsm.greetComplete()
         }
 
-        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil || (AppState.shared.permanentConversationBar && AppState.shared.view == .overview) }
+        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil }
+        fsm.keepsCompactVisible = { AppState.shared.permanentConversationBar }
         NotificationCenter.default.addObserver(forName: .conversationBarModeChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
-            if self.state.permanentConversationBar { self.fsm.openedExternally(); self.expand(to: self.defaultView()) }
+            if self.state.permanentConversationBar { self.fsm.reveal() }
             else { self.collapse() }
         }
     }
@@ -721,7 +722,7 @@ final class IslandWindowController: NSWindowController {
 
     func baseMode() -> IslandMode {
         guard state.isPresent else { return .hidden }
-        return state.tasks.isEmpty ? .hidden : .compact
+        return state.permanentConversationBar || !state.tasks.isEmpty ? .compact : .hidden
     }
 
     // MARK: - Activity reset (call on any user interaction in island)
@@ -772,7 +773,7 @@ final class IslandWindowController: NSWindowController {
         let panelH = window?.frame.height ?? 320
         let panelW = window?.frame.width  ?? 720
         let (islandW, fixedH) = islandSize(mode: s.mode, view: s.view,
-                                            progress: s.uploadProgress, nw: notchW, nh: notchH)
+                                            progress: s.uploadProgress, nw: notchW, nh: notchH, conversationMode: s.permanentConversationBar)
         // Chat view resizes dynamically — must match IslandContainer.chatPromptHeight
         let islandH: CGFloat
         if s.mode == .expanded && s.view == .prompt {
@@ -838,7 +839,7 @@ final class IslandPanel: NSPanel {
     func currentIslandFrame(nw: CGFloat, nh: CGFloat) -> CGRect {
         let s = AppState.shared
         let (w, fixedH) = islandSize(mode: s.mode, view: s.view,
-                                      progress: s.uploadProgress, nw: nw, nh: nh)
+                                      progress: s.uploadProgress, nw: nw, nh: nh, conversationMode: s.permanentConversationBar)
         let h: CGFloat
         if s.mode == .expanded && s.view == .prompt {
             let base: CGFloat = 240
@@ -896,11 +897,13 @@ extension Notification.Name {
 func islandSize(mode: IslandMode, view: IslandView,
                 progress: Double = 0,
                 nw: CGFloat = IslandConst.notchWidth,
-                nh: CGFloat = IslandConst.notchHeight) -> (CGFloat, CGFloat) {
+                nh: CGFloat = IslandConst.notchHeight,
+                conversationMode: Bool = false) -> (CGFloat, CGFloat) {
     switch mode {
     case .hidden:   return (nw, nh)
     case .compact:  return (nw + 160, nh)
     case .expanded:
+        if conversationMode && view == .overview { return (IslandConst.expandedWidth, 196) }
         let layout = IslandConst.viewLayouts[view]!
         return (IslandConst.expandedWidth, layout.height)
     }

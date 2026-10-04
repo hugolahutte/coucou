@@ -26,10 +26,11 @@ signed-in conversation. Verify the first imported response before relying on it.
 
 ### Permanent conversation bar
 
-The home view now keeps ChatGPT Mac, Claude Cobra and Claude HL in three persistent
-columns. Each space opens its reply inbox; conversation rows show pending replies
-and ordered draft counts. The bar stays expanded on Home and replaces the default
-integration cards. Disable it with **Garder mes trois espaces dans la barre** in
+The home view keeps ChatGPT Mac, Claude Cobra and Claude HL in three columns.
+The panel starts folded, with a compact summary of the three pending counts.
+Click the notch to expand, use the fold button or Escape to close it, or let it
+fold after inactivity; the compact summary stays visible. Each space opens its reply inbox; conversation rows show pending replies
+and ordered draft counts. Conversation mode replaces the default integration cards. Disable it with **Afficher mes trois espaces dans la barre** in
 the inbox or the inbox icon’s context menu. Alerts and other views still work.
 
 Previously observed Claude sidebar titles are retained locally (up to 50).
